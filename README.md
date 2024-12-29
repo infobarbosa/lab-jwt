@@ -95,30 +95,30 @@ app = Flask(__name__)
 SECRET_KEY = 'your_secret_key'
 
 def token_required(f):
-          def decorator(*args, **kwargs):
-                    token = request.headers.get('Authorization').split()[1]
-                    try:
-                              data = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
-                              request.scopes = data.get('scope', '').split()
-                    except Exception as e:
-                              return jsonify({"message": "Token is invalid!"}), 403
-                    return f(*args, **kwargs)
-          return decorator
+     def decorator(*args, **kwargs):
+          token = request.headers.get('Authorization').split()[1]
+          try:
+               data = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+               request.scopes = data.get('scope', '').split()
+          except Exception as e:
+               return jsonify({"message": "Token inválido!"}), 403
+          return f(*args, **kwargs)
+     return decorator
 
 def requires_scope(required_scope):
-          def decorator(f):
-                    def wrapper(*args, **kwargs):
-                              if required_scope not in request.scopes:
-                                        return jsonify({"message": "Permission denied!"}), 403
-                              return f(*args, **kwargs)
-                    return wrapper
-          return decorator
+     def decorator(f):
+          def wrapper(*args, **kwargs):
+               if required_scope not in request.scopes:
+                    return jsonify({"message": "Permission denied!"}), 403
+               return f(*args, **kwargs)
+          return wrapper
+     return decorator
 
 @app.route('/protected', methods=['GET'])
 @token_required
 @requires_scope('read')
 def protected():
-          return jsonify({"message": "This is a protected route."})
+     return jsonify({"message": "Esta é uma rota protegida."})
 
 if __name__ == '__main__':
           app.run(debug=True)
