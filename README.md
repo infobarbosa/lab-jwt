@@ -66,68 +66,150 @@ curl -X GET \
 
 ```
 
-# Scopes
-Scopes são uma maneira de definir permissões específicas para um token JWT. Eles permitem que você controle o acesso a diferentes partes da sua aplicação, especificando quais ações o portador do token pode realizar. Scopes são geralmente representados como uma lista de strings no payload do token JWT.
+# Scopes (lab02)
+Scopes são uma forma de definir permissões específicas para um token JWT. Dessa forma, você controla o acesso a diferentes partes da aplicação, especificando quais ações o portador do token pode realizar. Scopes são geralmente representados como uma lista de strings no payload do token, por exemplo, ["read", "write"].
 
-### Conceito e Função
-Scopes são usados para limitar o acesso a recursos específicos com base nas permissões atribuídas ao token. Por exemplo, você pode ter um token que permite apenas a leitura de dados, enquanto outro token permite tanto a leitura quanto a escrita. Isso é útil para implementar controle de acesso baseado em funções (RBAC) e garantir que os usuários só possam acessar os recursos que lhes são permitidos.
 
-### Utilizando Scopes com JWT
-Para utilizar scopes com JWT, você precisa incluir uma reivindicação (claim) chamada `scope` no payload do token. Aqui está um exemplo de como criar um token com scopes:
+## Conceito e Função
+Scopes são usados para limitar o acesso a recursos com base em permissões concedidas.
+Exemplos:
+- read: Permite apenas leitura de recursos.
+- write: Permite criação, atualização ou remoção de recursos.
+- admin: Permite acesso privilegiado a rotas administrativas.
 
-#### Exemplo de Payload com Scopes
+#### Preparando o ambiente para Scopes
+Este laboratório possui um arquivo específico, chamado main_scopes.py, que demonstra como utilizar JWT e scopes juntos. Para executá-lo:
+
+Certifique-se de estar no diretório raiz do projeto (onde está o arquivo docker-compose.yml).
+Caso deseje testar localmente (fora de containers), é possível instalar as dependências e rodar o main_scopes.py diretamente. Porém, recomenda-se o uso do Docker para manter o ambiente padronizado.
+Construindo e subindo o container (usando main_scopes.py)
+
+## Passo 1: Build da imagem
+```sh
+docker compose build
+
+```
+
+## Passo 2: Subindo o container
+```sh
+docker-compose up -d
+
+```
+
+Observação: Se você estiver utilizando o mesmo docker-compose.yml de exemplos anteriores, verifique se o CMD ou o Dockerfile foi ajustado para executar main_scopes.py ao invés de main.py. Caso contrário, você pode entrar no container e executar manualmente o main_scopes.py:
+
+```sh
+docker exec -it <nome_ou_id_do_container> python main_scopes.py
+
+```
+
+## Rotas e Testes com Scopes
+1. Rota Pública
+A rota raiz (/) não exige nenhum token:
+
+```sh
+curl -X GET http://localhost:5000
+
+```
+Deve retornar:
+
 ```json
 {
-     "sub": "marcelo",
-     "scope": "read write",
-     "exp": 1735415630
+  "message": "Bem-vindo à API de Autenticação com Scopes!"
 }
 ```
 
-#### Verificando Scopes no Servidor
-No lado do servidor, você precisa verificar se o token possui os scopes necessários para acessar um recurso específico. Aqui está um exemplo em Python usando Flask e PyJWT:
+2. Rota login (Obtendo o token com Scopes)
+Existem dois usuários no exemplo do main_scopes.py:
 
-```python
-from flask import Flask, request, jsonify
-import jwt
+- marcelo: "password": "senha123", "scopes": ["read", "write"]
+- barbosa: "password": "abc123", "scopes": ["read"]
 
-app = Flask(__name__)
-SECRET_KEY = 'your_secret_key'
+Exemplo de login com **marcelo**:
 
-def token_required(f):
-     def decorator(*args, **kwargs):
-          token = request.headers.get('Authorization').split()[1]
-          try:
-               data = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
-               request.scopes = data.get('scope', '').split()
-          except Exception as e:
-               return jsonify({"message": "Token inválido!"}), 403
-          return f(*args, **kwargs)
-     return decorator
+```sh
+curl -X POST \
+     -H "Content-Type: application/json" \
+     -d '{"username":"marcelo","password":"senha123"}' \
+     http://localhost:5000/login
 
-def requires_scope(required_scope):
-     def decorator(f):
-          def wrapper(*args, **kwargs):
-               if required_scope not in request.scopes:
-                    return jsonify({"message": "Permissão negada!"}), 403
-               return f(*args, **kwargs)
-          return wrapper
-     return decorator
-
-@app.route('/protected', methods=['GET'])
-@token_required
-@requires_scope('read')
-def protected():
-     return jsonify({"message": "Esta é uma rota protegida."})
-
-if __name__ == '__main__':
-          app.run(debug=True)
 ```
 
-Neste exemplo, a rota `/protected` só pode ser acessada se o token JWT contiver o scope `read`.
+Este comando retorna um token JWT que contém, no payload, um array de scopes, por exemplo: ["read","write"].
 
-### Conclusão
-Scopes são uma ferramenta poderosa para gerenciar permissões em sua aplicação. Ao utilizar scopes com JWT, você pode implementar um controle de acesso granular e garantir que os usuários só possam realizar ações permitidas. Certifique-se de sempre validar os scopes no servidor para proteger seus recursos de acessos não autorizados.
+Exemplo de login com **barbosa**:
+
+```sh
+curl -X POST \
+     -H "Content-Type: application/json" \
+     -d '{"username":"barbosa","password":"abc123"}' \
+     http://localhost:5000/login
+
+```
+
+3. Rota protected (Rota Protegida por Autenticação)
+Qualquer usuário com token válido consegue acessar:
+
+```sh
+curl -X GET \
+     -H "Authorization: Bearer <SEU_TOKEN_AQUI>" \
+     http://localhost:5000/protected
+Caso o token seja válido, a resposta será algo como:
+
+```
+
+```json
+{
+  "message": "Olá, marcelo, você acessou uma rota protegida!"
+}
+```
+ou
+
+```json
+{
+  "message": "Olá, barbosa, você acessou uma rota protegida!"
+}
+```
+dependendo do usuário logado.
+
+4. Rota admin (Exige Escopo write)
+Para demonstrar a diferença de permissões, existe a rota `POST /admin`.<br>
+Apenas quem tiver o escopo write poderá acessar com sucesso. <br>
+
+Exemplo de cURL para essa rota:
+
+```sh
+curl -X POST \
+     -H "Authorization: Bearer <TOKEN_DE_MARCELO>" \
+     http://localhost:5000/admin
+
+```
+
+Se o token tiver o scope write, a resposta será:
+
+```json
+{
+  "message": "Olá, marcelo, você tem permissão de escrita!"
+}
+```
+
+Entretanto, se o usuário tiver somente read (caso do barbosa), a resposta será:
+
+```json
+{
+  "error": "Acesso negado. Escopo insuficiente."
+}
+```
+
+com código HTTP 403 (Forbidden).
+
+## Conclusão
+A introdução de scopes permite um controle fino de permissões, possibilitando autorizar ou restringir ações específicas dentro de sua aplicação. Esse modelo de segurança é muito útil em arquiteturas de micro serviços, APIs REST e em cenários em que você precisa garantir diferentes níveis de acesso para diferentes tipos de usuários.
+
+Scopes flexíveis: Você pode adicionar quantos scopes desejar (por exemplo, delete, admin, finance etc.).
+Validação: Sempre valide os scopes no lado do servidor (como mostramos no decorator require_scope).
+Boas práticas: Mantenha seu token em um lugar seguro (por exemplo, Storage seguro no frontend, e nunca inclua tokens em URLs).
+Desta forma, você consegue proteger rotas que exigem permissões específicas e manter o ambiente mais seguro e escalável.
 
 
 ## Parabéns!
