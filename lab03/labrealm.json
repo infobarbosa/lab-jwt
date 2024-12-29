@@ -1,0 +1,75 @@
+{
+    "realm": "infobarbank",
+    "enabled": true,
+  
+    "users": [
+      {
+        "username": "barbosa",
+        "enabled": true,
+        "credentials": [
+          {
+            "type": "password",
+            "value": "senha123"
+          }
+        ],
+        "realmRoles": [
+          "read"
+        ]
+      },
+      {
+        "username": "joao",
+        "enabled": true,
+        "credentials": [
+          {
+            "type": "password",
+            "value": "senha123"
+          }
+        ],
+        "realmRoles": [
+          "write"
+        ]
+      },
+      {
+        "username": "lucas",
+        "enabled": true,
+        "credentials": [
+          {
+            "type": "password",
+            "value": "senha123"
+          }
+        ],
+        "realmRoles": [
+          "admin"
+        ]
+      }
+    ],
+  
+    "roles": {
+      "realm": [
+        {
+          "name": "read",
+          "description": "Role para leitura"
+        },
+        {
+          "name": "write",
+          "description": "Role para escrita"
+        },
+        {
+          "name": "admin",
+          "description": "Role de administrador"
+        }
+      ]
+    },
+  
+    "clients": [
+      {
+        "clientId": "lab03-client",
+        "directAccessGrantsEnabled": true,
+        "publicClient": true,
+        "redirectUris": [
+          "*"
+        ]
+      }
+    ]
+  }
+  
