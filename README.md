@@ -109,7 +109,7 @@ def requires_scope(required_scope):
      def decorator(f):
           def wrapper(*args, **kwargs):
                if required_scope not in request.scopes:
-                    return jsonify({"message": "Permission denied!"}), 403
+                    return jsonify({"message": "Permissão negada!"}), 403
                return f(*args, **kwargs)
           return wrapper
      return decorator
